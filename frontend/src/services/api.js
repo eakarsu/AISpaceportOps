@@ -160,6 +160,10 @@ export const aiDebrisMitigationPlan     = ai('debris-mitigation-plan');
 export const aiPostFlightNarrative      = ai('post-flight-narrative');
 export const aiRegulatoryComplianceCheck = ai('regulatory-compliance-check');
 
+// Apply pass 7 — new advisory-only AI verbs
+export const aiPayloadIntegrationChecklist = ai('payload-integration-checklist');
+export const aiSonicBoomForecast           = ai('sonic-boom-forecast');
+
 // AI history
 export const getAIHistory = (feature, limit = 25) => {
   const qs = new URLSearchParams({
@@ -180,6 +184,46 @@ export const getNotifications         = () => request('/notifications');
 export const getUnreadNotifications   = () => request('/notifications/unread');
 export const markNotificationRead     = (id) => request(`/notifications/${id}/read`, { method: 'POST' });
 export const markAllNotificationsRead = () => request('/notifications/mark-all-read', { method: 'POST' });
+
+// Apply pass 7 — Tenant comms (threads + messages + canned templates)
+export const tenantCommsApi = {
+  templates:        ()       => request('/tenant-comms/templates'),
+  listThreads:      (params) => {
+    const qs = new URLSearchParams(params || {}).toString();
+    return request(`/tenant-comms/threads${qs ? '?' + qs : ''}`);
+  },
+  getThread:        (id)     => request(`/tenant-comms/threads/${id}`),
+  createThread:     (data)   => request('/tenant-comms/threads', { method: 'POST', body: JSON.stringify(data) }),
+  updateThread:     (id, d)  => request(`/tenant-comms/threads/${id}`, { method: 'PUT',  body: JSON.stringify(d) }),
+  deleteThread:     (id)     => request(`/tenant-comms/threads/${id}`, { method: 'DELETE' }),
+  listMessages:     (threadId)        => request(`/tenant-comms/threads/${threadId}/messages`),
+  postMessage:      (threadId, data)  => request(`/tenant-comms/threads/${threadId}/messages`, { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// Apply pass 7 — Customer multi-launch portfolio rollup
+export const customerPortfolioApi = {
+  list: () => request('/customer-portfolio'),
+  get:  (customerId) => request(`/customer-portfolio/${customerId}`),
+};
+
+// Apply pass 7 — Marine clearance (NOTMAR/NOTAM); USCG live feed is NEEDS-CREDS (503)
+export const marineClearanceApi = {
+  list:    ()      => request('/marine-clearance'),
+  get:     (id)    => request(`/marine-clearance/${id}`),
+  create:  (d)     => request('/marine-clearance',       { method: 'POST', body: JSON.stringify(d) }),
+  update:  (id, d) => request(`/marine-clearance/${id}`, { method: 'PUT',  body: JSON.stringify(d) }),
+  remove:  (id)    => request(`/marine-clearance/${id}`, { method: 'DELETE' }),
+  liveUscg:    () => request('/marine-clearance/live-uscg'),
+  liveFaaNotam:() => request('/marine-clearance/live-faa-notam'),
+  conflictSummary: (d) => request('/marine-clearance/conflict-summary', { method: 'POST', body: JSON.stringify(d) }),
+};
+
+// Apply pass 7 — Range safety zone GeoJSON polygons (advisory only)
+export const rangeSafetyZoneGeoJsonApi = {
+  get:    (id)    => request(`/range-safety-zones/${id}/geojson`),
+  put:    (id, d) => request(`/range-safety-zones/${id}/geojson`, { method: 'PUT', body: JSON.stringify(d) }),
+  remove: (id)    => request(`/range-safety-zones/${id}/geojson`, { method: 'DELETE' }),
+};
 
 // Webhooks
 export const webhooksApi = {

@@ -220,6 +220,33 @@ const SAMPLES = {
     { label: 'Electron Flock-25 — NZ MoT',
       values: { mission: 'PLANET FLOCK-25', vehicle: 'Electron', customer: 'Planet Labs', authority: 'New Zealand MoT', context: 'NZ launch permit; debris mitigation review.' } },
   ],
+
+  // Apply pass 7 — new advisory-only verbs
+  'payload-integration-checklist': [
+    { label: 'Iridium NEXT-9 / Falcon 9 / SLC-40',
+      values: { payload: 'IRIDIUM NEXT-9', mission: 'IRIDIUM NEXT-9', vehicle: 'Falcon 9 Block 5', integration_site: 'CCSFS SLC-40 PIF', t_minus_window: 'L-21d to L-3d', notes: 'Encapsulation L-10d; mate to PA L-7d; transport to pad L-3d.' } },
+    { label: 'Galileo L13 / Ariane 6 / BAF Kourou',
+      values: { payload: 'GALILEO L13', mission: 'GALILEO L13', vehicle: 'Ariane 6 A64', integration_site: 'BAF Kourou', t_minus_window: 'L-30d to L-2d', notes: 'Dual-payload dispenser; ESA contamination class 100k.' } },
+    { label: 'AX-5 Crew Dragon / KSC LC-39A',
+      values: { payload: 'AX-5 CREW DRAGON', mission: 'AX-5 CREW', vehicle: 'Falcon 9 + Crew Dragon', integration_site: 'KSC HIF', t_minus_window: 'L-14d to L-1d', notes: 'Crewed integration — additional ECLSS, suit-mate, emergency egress checks.' } },
+    { label: 'Lightspeed-1 / Falcon Heavy / LC-39A',
+      values: { payload: 'TELESAT LIGHTSPEED-1', mission: 'TELESAT LIGHTSPEED-1', vehicle: 'Falcon Heavy', integration_site: 'KSC HIF', t_minus_window: 'L-21d to L-3d', notes: 'Heavy fairing; long-duration battery conditioning required.' } },
+    { label: 'Electron Flock-25 / Mahia',
+      values: { payload: 'PLANET FLOCK-25', mission: 'PLANET FLOCK-25', vehicle: 'Electron', integration_site: 'Mahia ICF', t_minus_window: 'L-10d to L-1d', notes: '36 cubesats on Electron kick stage; dispenser sequencing critical.' } },
+  ],
+
+  'sonic-boom-forecast': [
+    { label: 'Falcon 9 RTLS LZ-1 / Cape',
+      values: { mission: 'IRIDIUM NEXT-9', vehicle: 'Falcon 9 Block 5', phase: 'booster_return', trajectory_notes: 'RTLS to LZ-1; boost-back through Bermuda High; surface winds 12 kt SW.' } },
+    { label: 'Starship reentry over Boca Chica',
+      values: { mission: 'Starship V2 Flight Test', vehicle: 'Starship', phase: 'reentry', trajectory_notes: 'High-AoA reentry; carpet width up to 40 km over coastal South Texas.' } },
+    { label: 'Falcon Heavy side-booster RTLS pair',
+      values: { mission: 'LIGHTSPEED-1', vehicle: 'Falcon Heavy', phase: 'booster_return', trajectory_notes: 'Twin RTLS at LZ-1 / LZ-2; double sonic boom over central Brevard County.' } },
+    { label: 'Electron descent Mahia',
+      values: { mission: 'PLANET FLOCK-25', vehicle: 'Electron', phase: 'reentry', trajectory_notes: 'Smaller booster; carpet over Pacific 250 km E of NZ coast.' } },
+    { label: 'Vulcan ascent Eastern Range',
+      values: { mission: 'NROL-114', vehicle: 'Vulcan Centaur', phase: 'ascent', trajectory_notes: 'SRB separation overpressure; Atlantic offshore corridor.' } },
+  ],
 };
 
 // GET /api/ai/samples?feature=<verb>
@@ -270,21 +297,55 @@ function verbRoute(name, fn) {
   });
 }
 
-verbRoute('launch-window-optimize',     ai.launchWindowOptimize);
-verbRoute('weather-window-brief',       ai.weatherWindowBrief);
-verbRoute('conjunction-risk',           ai.conjunctionRisk);
-verbRoute('range-safety-assess',        ai.rangeSafetyAssess);
-verbRoute('fuel-loadout-calc',          ai.fuelLoadoutCalc);
-verbRoute('recovery-plan',              ai.recoveryPlan);
-verbRoute('anomaly-triage',             ai.anomalyTriage);
-verbRoute('mission-brief',              ai.missionBrief);
-verbRoute('payload-trajectory-check',   ai.payloadTrajectoryCheck);
-verbRoute('ground-systems-checklist',   ai.groundSystemsChecklist);
-verbRoute('ngs-link-budget',            ai.ngsLinkBudget);
-verbRoute('draft-press-release',        ai.draftPressRelease);
-verbRoute('debris-mitigation-plan',     ai.debrisMitigationPlan);
-verbRoute('post-flight-narrative',      ai.postFlightNarrative);
-verbRoute('regulatory-compliance-check',ai.regulatoryComplianceCheck);
+// Safety-officer advisory gate. Any AI verb whose output drives a
+// range-safety / FTS / debris go/no-go decision must be flagged
+// advisory_only=true and requires_safety_officer_approval=true on the
+// output envelope. The safe wrapper is applied after the verb returns.
+const SAFETY_ADVISORY_VERBS = new Set([
+  'range-safety-assess',
+  'conjunction-risk',
+  'debris-mitigation-plan',
+  'payload-integration-checklist',
+  'sonic-boom-forecast',
+]);
+
+function verbRouteWithSafety(name, fn) {
+  router.post(`/${name}`, async (req, res) => {
+    try {
+      const input = req.body || {};
+      const result = await fn(input);
+      if (SAFETY_ADVISORY_VERBS.has(name) && result && typeof result === 'object') {
+        result.advisory_only = true;
+        result.requires_safety_officer_approval = true;
+        result.safety_disclaimer =
+          'AI output is advisory only. Operational range-safety, FTS, and ' +
+          'debris go/no-go decisions require explicit safety officer sign-off.';
+      }
+      await record(name, input, result);
+      res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+}
+
+verbRouteWithSafety('launch-window-optimize',     ai.launchWindowOptimize);
+verbRouteWithSafety('weather-window-brief',       ai.weatherWindowBrief);
+verbRouteWithSafety('conjunction-risk',           ai.conjunctionRisk);
+verbRouteWithSafety('range-safety-assess',        ai.rangeSafetyAssess);
+verbRouteWithSafety('fuel-loadout-calc',          ai.fuelLoadoutCalc);
+verbRouteWithSafety('recovery-plan',              ai.recoveryPlan);
+verbRouteWithSafety('anomaly-triage',             ai.anomalyTriage);
+verbRouteWithSafety('mission-brief',              ai.missionBrief);
+verbRouteWithSafety('payload-trajectory-check',   ai.payloadTrajectoryCheck);
+verbRouteWithSafety('ground-systems-checklist',   ai.groundSystemsChecklist);
+verbRouteWithSafety('ngs-link-budget',            ai.ngsLinkBudget);
+verbRouteWithSafety('draft-press-release',        ai.draftPressRelease);
+verbRouteWithSafety('debris-mitigation-plan',     ai.debrisMitigationPlan);
+verbRouteWithSafety('post-flight-narrative',      ai.postFlightNarrative);
+verbRouteWithSafety('regulatory-compliance-check',ai.regulatoryComplianceCheck);
+
+// Apply pass 7 — new advisory-only verbs
+verbRouteWithSafety('payload-integration-checklist', ai.payloadIntegrationChecklist);
+verbRouteWithSafety('sonic-boom-forecast',           ai.sonicBoomForecast);
 
 // executive-brief: includes DB snapshot
 router.post('/executive-brief', async (req, res) => {

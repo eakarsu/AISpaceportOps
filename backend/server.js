@@ -87,6 +87,12 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 // Custom domain-specific aggregations (Mission Views)
 app.use('/api/custom-views', require('./routes/customViews'));
 
+// Apply pass 7 — full backlog implementation
+// (mount before app.listen / any catch-all)
+app.use('/api/tenant-comms',       require('./routes/tenantComms'));
+app.use('/api/customer-portfolio', require('./routes/customerPortfolio'));
+app.use('/api/marine-clearance',   require('./routes/marineClearance'));
+
 app.listen(PORT, () => {
   console.log(`\nAI Spaceport Ops API running on http://localhost:${PORT}\n`);
 });

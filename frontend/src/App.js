@@ -42,6 +42,13 @@ import AIDebrisMitigationPlanPage    from './pages/AIDebrisMitigationPlanPage';
 import AIPostFlightNarrativePage     from './pages/AIPostFlightNarrativePage';
 import AIRegulatoryComplianceCheckPage from './pages/AIRegulatoryComplianceCheckPage';
 
+// Apply pass 7 — new pages
+import AIPayloadIntegrationChecklistPage from './pages/AIPayloadIntegrationChecklistPage';
+import AISonicBoomForecastPage           from './pages/AISonicBoomForecastPage';
+import TenantCommsPage                   from './pages/TenantCommsPage';
+import CustomerPortfolioPage             from './pages/CustomerPortfolioPage';
+import MarineClearancePage               from './pages/MarineClearancePage';
+
 // Admin
 import WebhooksPage from './pages/WebhooksPage';
 
@@ -52,6 +59,9 @@ import LoginPage from './pages/LoginPage';
 import { getToken } from './services/api';
 
 import './App.css';
+
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
 
 function RequireAuth({ children }) {
   const location = useLocation();
@@ -69,6 +79,9 @@ function ShellRoutes() {
         <Topbar />
         <div style={{ padding: '24px 32px' }}>
           <Routes>
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
             <Route path="/" element={<Dashboard />} />
 
             <Route path="/launch-vehicles"      element={<LaunchVehiclesPage />} />
@@ -106,6 +119,13 @@ function ShellRoutes() {
             <Route path="/ai/debris-mitigation-plan"     element={<AIDebrisMitigationPlanPage />} />
             <Route path="/ai/post-flight-narrative"      element={<AIPostFlightNarrativePage />} />
             <Route path="/ai/regulatory-compliance-check" element={<AIRegulatoryComplianceCheckPage />} />
+
+            <Route path="/ai/payload-integration-checklist" element={<AIPayloadIntegrationChecklistPage />} />
+            <Route path="/ai/sonic-boom-forecast"           element={<AISonicBoomForecastPage />} />
+
+            <Route path="/tenant-comms"        element={<TenantCommsPage />} />
+            <Route path="/customer-portfolio"  element={<CustomerPortfolioPage />} />
+            <Route path="/marine-clearance"    element={<MarineClearancePage />} />
 
             <Route path="/webhooks" element={<WebhooksPage />} />
 

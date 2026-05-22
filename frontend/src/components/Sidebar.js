@@ -23,9 +23,17 @@ const GROUPS = [
   {
     label: 'Payloads',
     links: [
-      { to: '/payloads',       label: 'Payloads' },
-      { to: '/customers',      label: 'Customers' },
-      { to: '/fuel-inventory', label: 'Fuel Inventory' },
+      { to: '/payloads',           label: 'Payloads' },
+      { to: '/customers',          label: 'Customers' },
+      { to: '/customer-portfolio', label: 'Customer Portfolio' },
+      { to: '/fuel-inventory',     label: 'Fuel Inventory' },
+    ],
+  },
+  {
+    label: 'Tenant Ops',
+    links: [
+      { to: '/tenant-comms',     label: 'Tenant Comms' },
+      { to: '/marine-clearance', label: 'Marine Clearance' },
     ],
   },
   {
@@ -60,8 +68,9 @@ const GROUPS = [
       { to: '/ai/recovery-plan',            label: 'AI · Recovery Plan' },
       { to: '/ai/fuel-loadout-calc',        label: 'AI · Fuel Loadout Calc' },
       { to: '/ai/payload-trajectory-check', label: 'AI · Payload Trajectory' },
-      { to: '/ai/ground-systems-checklist', label: 'AI · Ground Checklist' },
-      { to: '/ai/ngs-link-budget',          label: 'AI · NGS Link Budget' },
+      { to: '/ai/ground-systems-checklist',       label: 'AI · Ground Checklist' },
+      { to: '/ai/payload-integration-checklist',  label: 'AI · Payload Integration' },
+      { to: '/ai/ngs-link-budget',                label: 'AI · NGS Link Budget' },
     ],
   },
   {
@@ -71,6 +80,7 @@ const GROUPS = [
       { to: '/ai/conjunction-risk',       label: 'AI · Conjunction Risk' },
       { to: '/ai/anomaly-triage',         label: 'AI · Anomaly Triage' },
       { to: '/ai/debris-mitigation-plan', label: 'AI · Debris Mitigation' },
+      { to: '/ai/sonic-boom-forecast',    label: 'AI · Sonic Boom Forecast' },
     ],
   },
   {

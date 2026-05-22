@@ -417,6 +417,70 @@ async function regulatoryComplianceCheck(input = {}) {
   return safeJsonParse(r, { summary: typeof r === 'string' ? r : 'No response', authority_reviews: [] });
 }
 
+// ──────────────────────────────────────────────
+// Apply pass 7 — new AI verbs (advisory only).
+// See _AUDIT_NOTE.md ## Apply pass 7 (full backlog implementation).
+// ──────────────────────────────────────────────
+
+// 17. Payload Integration Checklist (distinct from ground-systems-checklist).
+//     Drafts the payload-side integration sequence: encapsulation, mate to
+//     payload adapter, electrical mate, GSE checks, RF compatibility,
+//     contamination control, transport to pad.
+async function payloadIntegrationChecklist(input = {}) {
+  const sys = `${SYSTEM_PROMPT} Draft a payload-integration checklist (payload-side, distinct from launch-vehicle ground systems). Return strict JSON:
+{
+  "payload": string,
+  "mission": string,
+  "vehicle": string,
+  "stages": [{ "stage": string, "items": [{ "step": string, "owner": string, "due_t_minus": string, "status": "todo"|"in_progress"|"done"|"blocked", "notes": string }] }],
+  "ipt_signoffs_required": [{ "role": string, "name": string, "signed": boolean }],
+  "contamination_class_required": string,
+  "rf_compat_required": boolean,
+  "encapsulation_complete_t_minus": string,
+  "blockers": [{ "system": string, "issue": string, "owner": string }],
+  "overall_readiness_pct": number,
+  "advisory_only": true,
+  "requires_safety_officer_approval": true,
+  "summary": string
+}`;
+  const usr = `Payload integration inputs:\n${JSON.stringify(input, null, 2)}`;
+  const r = await callOpenRouter(sys, usr);
+  const out = safeJsonParse(r, { summary: typeof r === 'string' ? r : 'No response', stages: [] });
+  out.advisory_only = true;
+  out.requires_safety_officer_approval = true;
+  return out;
+}
+
+// 18. Sonic Boom Forecast — population-overflight advisory.
+//     NEEDS-PRODUCT-DECISION: advisory only. Output must include
+//     advisory_only=true and requires_safety_officer_approval=true.
+async function sonicBoomForecast(input = {}) {
+  const sys = `${SYSTEM_PROMPT} Produce a sonic-boom population-overflight advisory forecast for a launch or re-entry trajectory. Return strict JSON:
+{
+  "mission": string,
+  "vehicle": string,
+  "trajectory_phase": "ascent"|"reentry"|"booster_return"|"abort",
+  "carpet_corridor": [{ "lat": number, "lng": number }],
+  "carpet_width_km": number,
+  "peak_overpressure_psf": number,
+  "population_under_carpet_estimate": number,
+  "noise_sensitive_sites": [{ "name": string, "lat": number, "lng": number, "expected_overpressure_psf": number }],
+  "atmospheric_conditions": { "wind_aloft_kt": number, "inversion_layer_ft": number, "humidity_pct": number, "notes": string },
+  "mitigations": [string],
+  "regulatory_thresholds": [{ "authority": string, "metric": string, "limit": string, "verdict": "below"|"near"|"exceeds" }],
+  "go_no_go_recommendation": "GO"|"CAUTION"|"NO-GO",
+  "advisory_only": true,
+  "requires_safety_officer_approval": true,
+  "summary": string
+}`;
+  const usr = `Sonic boom forecast inputs:\n${JSON.stringify(input, null, 2)}`;
+  const r = await callOpenRouter(sys, usr);
+  const out = safeJsonParse(r, { summary: typeof r === 'string' ? r : 'No response', carpet_corridor: [], noise_sensitive_sites: [] });
+  out.advisory_only = true;
+  out.requires_safety_officer_approval = true;
+  return out;
+}
+
 module.exports = {
   callOpenRouter,
   safeJsonParse,
@@ -436,4 +500,6 @@ module.exports = {
   debrisMitigationPlan,
   postFlightNarrative,
   regulatoryComplianceCheck,
+  payloadIntegrationChecklist,
+  sonicBoomForecast,
 };
