@@ -62,7 +62,6 @@ export default function CustomerPortfolioPage() {
       })
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

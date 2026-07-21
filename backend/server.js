@@ -25,7 +25,9 @@ async function _onAnomalyCreated(row) {
 void _onAnomalyCreated;
 
 const app = express();
-const PORT = process.env.BACKEND_PORT || 3067;
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 3067;
+if ((process.env.JWT_SECRET || '').length < 32 || !process.env.GOVERNANCE_TENANT_ID || !process.env.DATABASE_URL) throw new Error('JWT_SECRET (32+ characters), GOVERNANCE_TENANT_ID, and DATABASE_URL are required');
+const generatedRoutesEnabled = process.env.ENABLE_GENERATED_FEATURES === 'true' && process.env.NODE_ENV !== 'production';
 
 // Middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
@@ -74,24 +76,26 @@ app.use('/api/post-flight-reports',  require('./routes/postFlightReports'));
 app.use('/api/audit-log',            require('./routes/auditLog'));
 
 // AI routes (16 sub-endpoints + history under /api/ai)
-app.use('/api/ai', require('./routes/ai'));
+if (generatedRoutesEnabled) app.use('/api/ai', require('./routes/ai'));
 
 // Cross-cutting
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/attachments',   require('./routes/attachments'));
-app.use('/api/webhooks',      require('./routes/webhooks'));
+if (generatedRoutesEnabled) app.use('/api/webhooks', require('./routes/webhooks'));
 
 // Dashboard stats
 app.use('/api/dashboard', require('./routes/dashboard'));
 
 // Custom domain-specific aggregations (Mission Views)
-app.use('/api/custom-views', require('./routes/customViews'));
+app.use('/api/custom-views', authenticateToken, require('./routes/customViews'));
 
 // Apply pass 7 — full backlog implementation
 // (mount before app.listen / any catch-all)
 app.use('/api/tenant-comms',       require('./routes/tenantComms'));
 app.use('/api/customer-portfolio', require('./routes/customerPortfolio'));
 app.use('/api/marine-clearance',   require('./routes/marineClearance'));
+app.use('/api/governed-spaceport-operations', require('./governance'));
+app.use('/api/governance', require('./governance'));
 
 app.listen(PORT, () => {
   console.log(`\nAI Spaceport Ops API running on http://localhost:${PORT}\n`);

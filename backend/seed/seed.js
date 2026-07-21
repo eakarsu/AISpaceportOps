@@ -1,17 +1,27 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+const crypto = require('crypto');
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'spaceport_ops',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  connectionString: process.env.DATABASE_URL,
 });
 
+function requireDestructiveSeed() {
+  if (process.env.ALLOW_DESTRUCTIVE_SEED !== '1') throw new Error('Set ALLOW_DESTRUCTIVE_SEED=1 to reset and seed the database');
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
+  if ((process.env.SEED_ADMIN_PASSWORD || '').length < 12) throw new Error('SEED_ADMIN_PASSWORD must contain at least 12 characters');
+  return process.env.SEED_ADMIN_PASSWORD;
+}
+
+function encodePassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return `scrypt$${salt}$${crypto.scryptSync(password, salt, 64).toString('hex')}`;
+}
+
 async function run() {
+  const encodedPassword = encodePassword(requireDestructiveSeed());
   const client = await pool.connect();
   try {
     console.log('[seed] resetting tables...');
@@ -501,9 +511,9 @@ async function run() {
 
     console.log('[seed] inserting users...');
     const users = [
-      ['admin@spaceport.io',  'admin123',  'Spaceport Admin', 'admin'],
-      ['ops@spaceport.io',    'ops123',    'Launch Ops',      'ops'],
-      ['viewer@spaceport.io', 'viewer123', 'Range Viewer',    'viewer'],
+      [process.env.ADMIN_EMAIL || process.env.DEMO_EMAIL || 'admin@spaceport.io', encodedPassword, 'Spaceport Admin', 'admin'],
+      ['ops@spaceport.io',    encodedPassword, 'Launch Ops',      'ops'],
+      ['viewer@spaceport.io', encodedPassword, 'Range Viewer',    'viewer'],
     ];
     for (const u of users) {
       await client.query(
