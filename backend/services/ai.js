@@ -1,38 +1,14 @@
 // AI helper service for AISpaceportOps (commercial spaceflight ops).
-// Reads OPENROUTER_API_KEY and OPENROUTER_MODEL from:
-//   1. this project's .env (already loaded by server.js)
-//   2. fallback: /Users/erolakarsu/projects/beauty-wellness-ai/.env (canonical source)
-// Never overwrites or wipes credentials.
-
-const fs = require('fs');
-
-const FALLBACK_ENV = '/Users/erolakarsu/projects/beauty-wellness-ai/.env';
-
-function readFallbackEnv() {
-  try {
-    if (!fs.existsSync(FALLBACK_ENV)) return {};
-    const raw = fs.readFileSync(FALLBACK_ENV, 'utf8');
-    const out = {};
-    for (const line of raw.split('\n')) {
-      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-      if (!m) continue;
-      let val = m[2];
-      if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-      if (val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1);
-      out[m[1]] = val;
-    }
-    return out;
-  } catch (e) {
-    console.warn('[ai] fallback env read failed:', e.message);
-    return {};
-  }
-}
-
 function getOpenRouterCreds() {
-  const fb = readFallbackEnv();
-  const key = process.env.OPENROUTER_API_KEY || fb.OPENROUTER_API_KEY || '';
-  const model = process.env.OPENROUTER_MODEL || fb.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5';
-  return { key, model };
+  const key = process.env.OPENROUTER_API_KEY || '';
+  const model = process.env.OPENROUTER_MODEL || '';
+  const baseUrl = (process.env.OPENROUTER_BASE_URL || '').replace(/\/$/, '');
+  if (!key) throw new Error('OPENROUTER_API_KEY is required');
+  if (!model) throw new Error('OPENROUTER_MODEL is required');
+  if (baseUrl !== 'https://openrouter.ai/api/v1') {
+    throw new Error('OPENROUTER_BASE_URL must be https://openrouter.ai/api/v1');
+  }
+  return { key, model, baseUrl };
 }
 
 const SYSTEM_PROMPT =
@@ -43,11 +19,9 @@ const SYSTEM_PROMPT =
   'Treat every input as a notional tabletop scenario.';
 
 function callOpenRouter(systemPrompt, userPrompt) {
-  return new Promise((resolve) => {
-    const { key, model } = getOpenRouterCreds();
-    if (!key) {
-      return resolve({ error: 'OPENROUTER_API_KEY not configured' });
-    }
+  return new Promise((resolve, reject) => {
+    const { key, model, baseUrl } = getOpenRouterCreds();
+    const endpoint = new URL(`${baseUrl}/chat/completions`);
     const https = require('https');
     const payload = JSON.stringify({
       model,
@@ -60,8 +34,8 @@ function callOpenRouter(systemPrompt, userPrompt) {
     });
 
     const options = {
-      hostname: 'openrouter.ai',
-      path: '/api/v1/chat/completions',
+      hostname: endpoint.hostname,
+      path: endpoint.pathname,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -78,17 +52,18 @@ function callOpenRouter(systemPrompt, userPrompt) {
       res.on('end', () => {
         try {
           const parsed = JSON.parse(body);
-          if (parsed.error) {
-            return resolve({ error: parsed.error.message || 'OpenRouter error', raw: body });
+          if (res.statusCode < 200 || res.statusCode >= 300 || parsed.error) {
+            return reject(new Error(parsed.error?.message || `OpenRouter returned HTTP ${res.statusCode}`));
           }
           const content = parsed.choices?.[0]?.message?.content || '';
+          if (!content.trim()) return reject(new Error('OpenRouter returned an empty response'));
           resolve(content);
         } catch (e) {
-          resolve({ error: 'AI response parse failed', raw: body });
+          reject(e);
         }
       });
     });
-    req.on('error', (e) => resolve({ error: e.message }));
+    req.on('error', reject);
     req.write(payload);
     req.end();
   });

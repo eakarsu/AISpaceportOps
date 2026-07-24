@@ -1,6 +1,7 @@
+const configuredApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3067';
 const API_BASE =
   (typeof window !== 'undefined' && window.__API_BASE__) ||
-  'http://localhost:3067/api';
+  `${configuredApiUrl.replace(/\/$/, '')}/api`;
 
 export { API_BASE };
 

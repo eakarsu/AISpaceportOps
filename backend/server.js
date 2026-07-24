@@ -75,8 +75,9 @@ app.use('/api/regulatory-approvals', require('./routes/regulatoryApprovals'));
 app.use('/api/post-flight-reports',  require('./routes/postFlightReports'));
 app.use('/api/audit-log',            require('./routes/auditLog'));
 
-// AI routes (16 sub-endpoints + history under /api/ai)
-if (generatedRoutesEnabled) app.use('/api/ai', require('./routes/ai'));
+// The application AI routes are a core authenticated capability. The feature
+// flag only controls generated prototype surfaces such as webhooks.
+app.use('/api/ai', require('./routes/ai'));
 
 // Cross-cutting
 app.use('/api/notifications', require('./routes/notifications'));
